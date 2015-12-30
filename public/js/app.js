@@ -3,9 +3,6 @@
  */
 
 $(function(){
-  $('.main.menu').visibility({
-    type: 'fixed'
-  });
   $('.ui.modal')
     .modal()
   ;
