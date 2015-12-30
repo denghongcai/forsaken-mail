@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Frosaken Mail</title>
+  <link href="//cdn.bootcss.com/semantic-ui/2.1.7/semantic.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/prism.css">
+</head>
+<body>
+<div class="ui main borderless menu">
+  <div class="ui text container" style="max-width: 100% !important;">
+    <div href="#" class="header item">
+      <img class="logo" src="http://semantic-ui.com/examples/assets/images/logo.png" alt="logo">
+      Forsaken Mail
+    </div>
+    <div class="ui label item right floated mailaddress"><i class="mail icon copyable"></i><span id="shortid">123</span></div>
+  </div>
+</div>
+<div class="ui main borderless menu placeholder" style="display: none;">
+  <div class="ui text container" style="max-width: 100% !important;">
+    <div href="#" class="header item">
+      <img src="http://semantic-ui.com/examples/assets/images/logo.png" alt="logo">
+      Forsaken Mail
+    </div>
+  </div>
+</div>
+<div class="ui container">
+  <div class="ui grid">
+    <div class="row">
+      <div class="column">
+        <table class="ui celled selectable table">
+          <thead>
+          <tr>
+            <th>发信人</th>
+            <th>主题</th>
+            <th>时间</th>
+          </tr>
+          </thead>
+          <tbody id="maillist">
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="row">
+      <div class="column">
+        <div class="ui card" id="mailcard">
+          <div class="content">
+            <i class="code icon right floated"></i>
+            <div class="header">可爱的小狗</div>
+          </div>
+          <div class="content">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ui modal" id="raw">
+  <div class="header">
+  </div>
+  <div class="content">
+  </div>
+</div>
+</body>
+<script src="//cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
+<script src="//cdn.bootcss.com/semantic-ui/2.1.7/semantic.min.js"></script>
+<script src="//cdn.bootcss.com/socket.io/1.3.7/socket.io.min.js"></script>
+<script src="//cdn.bootcss.com/clipboard.js/1.5.5/clipboard.min.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/prism.js"></script>
+</html>

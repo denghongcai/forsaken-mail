@@ -1,0 +1,8 @@
+{
+  "mailin": {
+    "host": "0.0.0.0",
+    "port": 25,
+    "disableWebhook": true
+  },
+  "host": "disposable.dhc-app.com"
+}
