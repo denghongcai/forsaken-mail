@@ -20,5 +20,5 @@ npm install && npm start
 if you want run this inside a docker container
 ```
 docker build -t denghongcai/forsaken-mail .
-docker run --name forsaken-mail -d -p 25:25 denghongcai/forsaken-mail
+docker run --name forsaken-mail -d -p 25:25 -p 3000:3000 denghongcai/forsaken-mail
 ```

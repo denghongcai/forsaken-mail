@@ -13,4 +13,5 @@ RUN npm config set registry https://registry.npm.taobao.org
 RUN npm install
 
 EXPOSE 25
+EXPOSE 3000
 CMD npm start
