@@ -24,9 +24,29 @@ $(function(){
   });
 
   var socket = io();
-  socket.on('shortid', function(id) {
+
+  var setMailAddress = function(id) {
+    localStorage.setItem('shortid', id);
     var mailaddress = id + '@' + location.hostname;
-    $('#shortid').text(mailaddress).siblings('i').attr('data-clipboard-text', mailaddress);
+    $('#shortid').val(mailaddress).parent().siblings('i').attr('data-clipboard-text', mailaddress);
+  };
+
+  if(('localStorage' in window)) {
+    var shortid = localStorage.getItem('shortid');
+    if(!shortid) {
+      socket.emit('request shortid', true);
+    }
+    else {
+      setMailAddress(shortid);
+    }
+  }
+
+  $('#refreshShortid').click(function() {
+    socket.emit('request shortid', true);
+  });
+
+  socket.on('shortid', function(id) {
+    setMailAddress(id);
   });
 
   socket.on('mail', function(mail) {
