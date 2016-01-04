@@ -14,7 +14,7 @@ let app = express();
 
 app.set('x-powered-by', false);
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: 3600000}));
 
 app.use('/api', api);
 
