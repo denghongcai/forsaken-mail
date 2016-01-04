@@ -42,7 +42,7 @@ $(function(){
         socket.emit('request shortid', true);
       }
       else {
-        socket.emit('set shortid', true);
+        socket.emit('set shortid', shortid);
         setMailAddress(shortid);
       }
     }
