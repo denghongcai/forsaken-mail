@@ -31,19 +31,21 @@ $(function(){
     $('#shortid').val(mailaddress).parent().siblings('button').find('.mail').attr('data-clipboard-text', mailaddress);
   };
 
-  if(('localStorage' in window)) {
-    var shortid = localStorage.getItem('shortid');
-    if(!shortid) {
-      socket.emit('request shortid', true);
-    }
-    else {
-      socket.emit('set shortid', true);
-      setMailAddress(shortid);
-    }
-  }
-
   $('#refreshShortid').click(function() {
     socket.emit('request shortid', true);
+  });
+
+  socket.on('connect', function() {
+    if(('localStorage' in window)) {
+      var shortid = localStorage.getItem('shortid');
+      if(!shortid) {
+        socket.emit('request shortid', true);
+      }
+      else {
+        socket.emit('set shortid', true);
+        setMailAddress(shortid);
+      }
+    }
   });
 
   socket.on('shortid', function(id) {
