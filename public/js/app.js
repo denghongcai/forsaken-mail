@@ -43,7 +43,6 @@ $(function(){
       }
       else {
         socket.emit('set shortid', shortid);
-        setMailAddress(shortid);
       }
     }
   });

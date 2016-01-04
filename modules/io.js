@@ -27,6 +27,7 @@ module.exports = function(io) {
       onlines.delete(socket.shortid);
       socket.shortid = shortid.generate().toLowerCase(); // generate shortid for a request
       onlines.set(socket.shortid, socket); // add incomming connection to online table
+      console.log(socket.shortid);
       socket.emit('shortid', socket.shortid);
     });
 
@@ -34,6 +35,8 @@ module.exports = function(io) {
       onlines.delete(socket.shortid);
       socket.shortid = id;
       onlines.set(socket.shortid, socket);
+      console.log(socket.shortid);
+      socket.emit('shortid', socket.shortid);
     })
   });
 
