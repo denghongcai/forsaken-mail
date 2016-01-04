@@ -28,7 +28,7 @@ $(function(){
   var setMailAddress = function(id) {
     localStorage.setItem('shortid', id);
     var mailaddress = id + '@' + location.hostname;
-    $('#shortid').val(mailaddress).parent().siblings('i').attr('data-clipboard-text', mailaddress);
+    $('#shortid').val(mailaddress).parent().siblings('button').find('.mail').attr('data-clipboard-text', mailaddress);
   };
 
   if(('localStorage' in window)) {
@@ -37,6 +37,7 @@ $(function(){
       socket.emit('request shortid', true);
     }
     else {
+      socket.emit('set shortid', true);
       setMailAddress(shortid);
     }
   }

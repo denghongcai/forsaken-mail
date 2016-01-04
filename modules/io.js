@@ -29,6 +29,12 @@ module.exports = function(io) {
       onlines.set(socket.shortid, socket); // add incomming connection to online table
       socket.emit('shortid', socket.shortid);
     });
+
+    socket.on('set shortid', function(id) {
+      onlines.delete(socket.shortid);
+      socket.shortid = id;
+      onlines.set(socket.shortid, socket);
+    })
   });
 
   io.on('disconnect', socket => {
