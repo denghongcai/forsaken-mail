@@ -10,4 +10,8 @@ let config = require(path.join(__dirname, '..', 'config-default.json'));
 
 mailin.start(config.mailin);
 
+mailin.on('error', function(err) {
+  console.error(err.stack);
+});
+
 module.exports = mailin;
