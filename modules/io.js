@@ -36,9 +36,9 @@ module.exports = function(io) {
       onlines.set(socket.shortid, socket);
       socket.emit('shortid', socket.shortid);
     })
-  });
-
-  io.on('disconnect', socket => {
-    onlines.delete(socket.shortid);
+    
+    socket.on('disconnect', socket => {
+      onlines.delete(socket.shortid);
+    });
   });
 };
