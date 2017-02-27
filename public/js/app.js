@@ -29,7 +29,7 @@ $(function(){
       self.toggleClass('edit');
       $shortId.prop('placeholder',$placeholder_old);
       $mailUser = $shortId.val();
-      var mailaddress = $mailUser + '@' + String( $shortId.prop( "mailsuffix" ));
+      var mailaddress = $mailUser + '@' + $shortId.prop( "mailsuffix" );
       setMailAddress($mailUser);
       $shortId.val(mailaddress);
       window.location.reload();
