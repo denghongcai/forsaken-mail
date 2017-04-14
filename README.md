@@ -1,6 +1,8 @@
 Forsaken-Mail
 ==============
-A self-hosted disposable mail service
+A self-hosted disposable mail service.
+
+[Online Demo](http://disposable.dhc-app.com)
 
 ### Installation
 
