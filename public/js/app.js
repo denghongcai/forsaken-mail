@@ -11,7 +11,7 @@ $(function(){
 
   $customShortId = $('#customShortid');
   $shortId = $('#shortid');
-  $cusstomTheme = 'check';
+  $customTheme = 'check';
   $placeholder_old = '请等待分配临时邮箱';
   $placeholder_new = '请输入不带后缀邮箱账号';
   $customShortId.on('click',function() {
@@ -21,7 +21,7 @@ $(function(){
     if(self.hasClass('edit')) {
       $shortId.val('');
       self.removeClass('edit');
-      self.toggleClass($cusstomTheme);
+      self.toggleClass($customTheme);
       $shortId.prop('placeholder', $placeholder_new);
     } else {
       $shortId.prop('disabled', true);
@@ -29,7 +29,7 @@ $(function(){
       self.toggleClass('edit');
       $shortId.prop('placeholder',$placeholder_old);
       $mailUser = $shortId.val();
-      var mailaddress = $mailUser + '@' + $shortId.prop( "mailsuffix" );
+      var mailaddress = $mailUser + '@' + location.hostname;
       setMailAddress($mailUser);
       $shortId.val(mailaddress);
       window.location.reload();
