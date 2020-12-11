@@ -1,15 +1,15 @@
-FROM node:latest
+FROM node:lts-alpine
 MAINTAINER Hongcai Deng <admin@dhchouse.com>
-
-RUN apt-get clean all
-RUN apt-get update
-RUN apt-get -y install git
-RUN git clone https://github.com/denghongcai/forsaken-mail.git /forsaken-mail
 
 WORKDIR /forsaken-mail
 
-RUN npm install
+RUN wget https://github.com/denghongcai/forsaken-mail/archive/master.tar.gz -q -O /tmp/forsaken-mail-master.tar.gz \
+    && tar zxf /tmp/forsaken-mail-master.tar.gz -C /tmp \
+    && mv /tmp/forsaken-mail-master/* /forsaken-mail \
+    && rm /tmp/forsaken-mail-master.tar.gz \
+    && npm install --production \
+    && npm cache clean --force
 
 EXPOSE 25
 EXPOSE 3000
-CMD npm start
+CMD ["npm", "start"]
