@@ -4,10 +4,24 @@
 
 'use strict';
 
-let shortid = require('shortid');
-let mailin = require('./mailin');
+const shortid = require('shortid');
+const mailin = require('./mailin');
+const config = require('./config');
 
 let onlines = new Map();
+
+function checkShortIdMatchBlackList(id) {
+  const keywordBlackList = config.keywordBlackList;
+  if (keywordBlackList && keywordBlackList.length > 0) {
+    for (let i = 0; i < keywordBlackList.length; i++) {
+      const keyword = keywordBlackList[i];
+      if (id.includes(keyword)) {
+        return true;
+      }
+    }
+  } 
+  return false;
+}
 
 module.exports = function(io) {
   mailin.on('message', function(connection, data) {
@@ -31,6 +45,10 @@ module.exports = function(io) {
     });
 
     socket.on('set shortid', function(id) {
+      if (checkShortIdMatchBlackList(id)) {
+        // skip set shortid if match keyword blacklist
+        return;
+      }
       onlines.delete(socket.shortid);
       socket.shortid = id;
       onlines.set(socket.shortid, socket);
