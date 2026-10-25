@@ -18,9 +18,11 @@ import { ApiError } from './errors.js'
 import { logger } from './logger.js'
 import { accountsRouter } from './routes/accounts.js'
 import { domainsRouter } from './routes/domains.js'
+import { createIngestRouter } from './routes/ingest.js'
 import { meRouter } from './routes/me.js'
 import { messagesRouter } from './routes/messages.js'
 import { tokenRouter } from './routes/token.js'
+import type { NewMessageListener } from './smtp.js'
 
 /**
  * Frontend build directory (web/dist); may not exist in local development
@@ -39,10 +41,21 @@ function resolveWebDist(): string | null {
 
 const webDistDir = resolveWebDist()
 
-export function createApp(): Express {
+/**
+ * @param notify callback fired when the raw-mail ingest route stores a
+ *   message (the entrypoint wires it to the WebSocket broadcaster; tests may
+ *   omit it)
+ */
+export function createApp(notify: NewMessageListener = () => {}): Express {
   const app = express()
 
   app.disable('x-powered-by')
+
+  /* ------------------------- Raw MIME intake -------------------------- */
+  // POST /api/ingest (relay mode) must see the untouched raw body, so it is
+  // mounted before the JSON parser. It stays a 404 unless INGEST_TOKEN is set.
+  app.use('/api/ingest', createIngestRouter(notify))
+
   // JSON body cap: requests like account creation are tiny, 1MB is plenty
   app.use(express.json({ limit: '1mb' }))
 
@@ -93,6 +106,20 @@ export function createApp(): Express {
     if (err instanceof ApiError) {
       res.status(err.status).json({ error: { code: err.code, message: err.message } })
       return
+    }
+    // body-parser failures (e.g. an ingest body over the size limit) carry
+    // their own 4xx status — honor it instead of collapsing into a 500
+    if (typeof err === 'object' && err !== null && 'statusCode' in err) {
+      const status = (err as { statusCode?: unknown }).statusCode
+      if (typeof status === 'number' && status >= 400 && status < 500) {
+        res.status(status).json({
+          error: {
+            code: 'bad_request',
+            message: err instanceof Error ? err.message : 'Bad request',
+          },
+        })
+        return
+      }
     }
     // Unknown error: log it but never expose details to the client
     logger.error(`[http] ${req.method} ${req.path} failed:`, err)

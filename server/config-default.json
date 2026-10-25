@@ -20,6 +20,9 @@
     "port": 25,
     "sizeLimit": 10485760
   },
+  "ingest": {
+    "token": null
+  },
   "retention": {
     "messageTtlHours": 24,
     "maxMessagesPerAccount": 100,
