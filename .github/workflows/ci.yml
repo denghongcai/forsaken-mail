@@ -1,0 +1,62 @@
+# Continuous integration: lint/typecheck/test the workspaces, then build the
+# Docker image and boot a container to verify the real thing end-to-end.
+name: CI
+
+on:
+  push:
+    branches: [master, v2]
+  pull_request:
+
+jobs:
+  # Workspace checks: the same commands contributors run locally
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Installs the pnpm version pinned in package.json#packageManager
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+
+  # Build the image and verify it inside a real container:
+  # boot → create account → SMTP delivery → message visible over the API → SPA served
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t forsaken-mail:ci .
+
+      - name: Start container
+        run: |
+          docker run -d --name forsaken-mail \
+            -p 127.0.0.1:3300:3000 \
+            -p 127.0.0.1:2525:2525 \
+            -e DOMAINS=test.local \
+            -e SMTP_PORT=2525 \
+            forsaken-mail:ci
+
+      - name: Smoke test against the running container
+        run: bash scripts/ci-smoke.sh
+        env:
+          API_PORT: '3300'
+          SMTP_PORT: '2525'
+
+      - name: Print container logs on failure
+        if: failure()
+        run: docker logs forsaken-mail
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f forsaken-mail
