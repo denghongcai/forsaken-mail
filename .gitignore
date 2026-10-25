@@ -96,5 +96,7 @@ data/
 *.sqlite-journal
 # Browser automation artifacts
 .playwright-cli/
+# Wrangler local state (worker/)
+.wrangler/
 # Local planning notes (not part of the repo)
 docs/plans/

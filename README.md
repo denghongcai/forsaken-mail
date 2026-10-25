@@ -46,6 +46,7 @@ REST API with Bearer token auth, under the `/api` prefix:
 | DELETE       | `/messages/:id`                  | Delete a message                                            |
 | GET          | `/messages/:id/source`           | Raw EML                                                     |
 | GET          | `/messages/:id/attachments/:aid` | Attachment download                                         |
+| POST         | `/ingest`                        | Raw MIME intake for relayed mail (Bearer token, see below)  |
 
 ## Local development
 
@@ -105,6 +106,21 @@ pnpm install && pnpm build
 SMTP_PORT=25 DOMAINS=mail.example.com node server/dist/index.js
 ```
 
+### Without exposing the server IP (Cloudflare Email Routing)
+
+The MX setup above publishes the server IP in DNS. To keep it hidden, let
+Cloudflare receive the mail and relay it over HTTPS — the origin then runs
+with `SMTP_DISABLED=1` and never opens port 25:
+
+```
+sender MTA -> Cloudflare MX (Email Routing) -> Email Worker
+    --POST /api/ingest (proxied HTTPS)--> origin
+```
+
+See [`worker/`](worker/) for the relay setup. Set `INGEST_TOKEN` on both
+sides (server env + Worker secret); the endpoint answers 404 unless a token
+is configured.
+
 ## Configuration
 
 Precedence: environment variables > `config.json` / `CONFIG_PATH` > `server/config-default.json`.
@@ -114,6 +130,7 @@ Precedence: environment variables > `config.json` / `CONFIG_PATH` > `server/conf
 | `PORT` / `HOST`            | 3000 / 0.0.0.0            | HTTP listen                             |
 | `SMTP_PORT` / `SMTP_HOST`  | 25 / 0.0.0.0              | SMTP listen                             |
 | `SMTP_DISABLED`            | —                         | Set to `1` to disable the built-in SMTP |
+| `INGEST_TOKEN`             | — (endpoint disabled)     | Shared secret for `POST /api/ingest`    |
 | `DOMAINS`                  | example domains           | Comma-separated mail domains            |
 | `MESSAGE_TTL_HOURS`        | 24                        | Message retention (hours)               |
 | `MAX_MESSAGES_PER_ACCOUNT` | 100                       | Per-account message cap                 |
