@@ -57,6 +57,59 @@ interface MessageDetailProps {
   onDelete: (id: string) => void
 }
 
+/** One theme's canvas defaults */
+interface ThemeTokens {
+  bg: string
+  fg: string
+}
+
+/** Cached light/dark palettes; filled on first use */
+let cachedTokens: { light: ThemeTokens; dark: ThemeTokens } | null = null
+
+/** Recursively collect --background/--foreground from :root and .dark rules */
+function collectTokens(rules: CSSRuleList, out: { light?: ThemeTokens; dark?: ThemeTokens }): void {
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i]
+    // The rule's own declarations come first: CSSStyleRule also exposes
+    // cssRules in nested CSS, so recursing before reading them would skip
+    // exactly the rules that hold the theme tokens.
+    const style = (rule as CSSStyleRule).style
+    if (style) {
+      const bg = style.getPropertyValue('--background').trim()
+      const fg = style.getPropertyValue('--foreground').trim()
+      if (bg !== '' && fg !== '') {
+        const selector = (rule as CSSStyleRule).selectorText ?? ''
+        if (/\.dark\b/.test(selector)) out.dark = { bg, fg }
+        else if (selector.includes(':root')) out.light = { bg, fg }
+      }
+    }
+    const nested = (rule as CSSGroupingRule).cssRules
+    if (nested) collectTokens(nested, out)
+  }
+}
+
+/**
+ * Both theme palettes, read once from the compiled CSS. Reading the
+ * stylesheets instead of getComputedStyle keeps this free of races with
+ * next-themes applying the .dark class after render.
+ */
+function themeTokens(): { light: ThemeTokens; dark: ThemeTokens } {
+  if (cachedTokens !== null) return cachedTokens
+  const out: { light?: ThemeTokens; dark?: ThemeTokens } = {}
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      collectTokens(sheet.cssRules, out)
+    } catch {
+      // cross-origin stylesheets are unreadable; skip
+    }
+  }
+  cachedTokens = {
+    light: out.light ?? { bg: '#ffffff', fg: '#0a0a0a' },
+    dark: out.dark ?? { bg: '#0a0a0a', fg: '#ededed' },
+  }
+  return cachedTokens
+}
+
 /**
  * Preview document builder: in dark mode, injects the app theme's
  * background/foreground tokens as the iframe document's canvas defaults, so
@@ -70,10 +123,7 @@ function usePreviewDoc(html: string, forceLight: boolean): string {
   const { resolvedTheme } = useTheme()
   return useMemo(() => {
     if (forceLight || resolvedTheme !== 'dark') return html
-    const rootStyle = getComputedStyle(document.documentElement)
-    const bg = rootStyle.getPropertyValue('--background').trim()
-    const fg = rootStyle.getPropertyValue('--foreground').trim()
-    if (bg === '' || fg === '') return html
+    const { bg, fg } = themeTokens().dark
     const patch = `<style>html{color-scheme:dark;background:${bg};color:${fg}}</style>`
     if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => `${m}${patch}`)
     if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, (m) => `${m}<head>${patch}</head>`)
