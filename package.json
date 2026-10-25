@@ -1,31 +1,23 @@
 {
   "name": "forsaken-mail",
-  "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
-  "scripts": {
-    "start": "node ./bin/www",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "engines": {
-    "node": ">=4.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/denghongcai/forrsaken-mail.git"
-  },
-  "author": "Hongcai Deng",
+  "version": "2.0.0",
+  "private": true,
+  "description": "A self-hosted disposable mail service",
   "license": "GPL-2.0",
-  "bugs": {
-    "url": "https://github.com/denghongcai/forrsaken-mail/issues"
+  "author": "Hongcai Deng <admin@dhchouse.com>",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24"
   },
-  "homepage": "https://github.com/denghongcai/forrsaken-mail#readme",
-  "dependencies": {
-    "body-parser": "^1.14.2",
-    "debug": "^2.2.0",
-    "express": "^4.13.3",
-    "mailin": "^3.0.2",
-    "shortid": "^2.2.4",
-    "socket.io": "^1.3.7"
+  "scripts": {
+    "dev": "pnpm --parallel --filter @forsaken/server --filter @forsaken/web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "start": "pnpm --filter @forsaken/server start"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
   }
 }
