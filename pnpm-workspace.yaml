@@ -1,0 +1,8 @@
+packages:
+  - server
+  - web
+
+# Dependencies whose postinstall scripts are allowed to run (pnpm ≥10 blocks
+# them by default). esbuild needs its script to place the platform binary.
+allowBuilds:
+  esbuild: true
