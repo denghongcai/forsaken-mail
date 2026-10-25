@@ -15,6 +15,7 @@ import {
   FileTextIcon,
   MailOpenIcon,
   PaperclipIcon,
+  SunIcon,
   Trash2Icon,
   TypeIcon,
 } from 'lucide-react'
@@ -57,25 +58,27 @@ interface MessageDetailProps {
 }
 
 /**
- * Preview document builder: injects the app theme's background/foreground
- * tokens as the iframe document's canvas defaults, so unstyled mail stays
- * readable in dark mode (the app theme is class-based and would not
+ * Preview document builder: in dark mode, injects the app theme's
+ * background/foreground tokens as the iframe document's canvas defaults, so
+ * unstyled mail stays readable (the app theme is class-based and would not
  * propagate to the sandboxed iframe on its own). Mails that set their own
- * colors are unaffected.
+ * colors are unaffected; mails that hardcode black text need the per-message
+ * light-preview override (forceLight skips injection entirely — the browser
+ * then renders the default white canvas).
  */
-function usePreviewDoc(html: string): string {
+function usePreviewDoc(html: string, forceLight: boolean): string {
   const { resolvedTheme } = useTheme()
   return useMemo(() => {
-    if (resolvedTheme === undefined) return html
+    if (forceLight || resolvedTheme !== 'dark') return html
     const rootStyle = getComputedStyle(document.documentElement)
     const bg = rootStyle.getPropertyValue('--background').trim()
     const fg = rootStyle.getPropertyValue('--foreground').trim()
     if (bg === '' || fg === '') return html
-    const patch = `<style>html{color-scheme:${resolvedTheme === 'dark' ? 'dark' : 'light'};background:${bg};color:${fg}}</style>`
+    const patch = `<style>html{color-scheme:dark;background:${bg};color:${fg}}</style>`
     if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => `${m}${patch}`)
     if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, (m) => `${m}<head>${patch}</head>`)
     return patch + html
-  }, [html, resolvedTheme])
+  }, [html, resolvedTheme, forceLight])
 }
 
 /** Attachment row: icon + filename + size + download button */
@@ -122,12 +125,17 @@ export function MessageDetail({
 }: MessageDetailProps) {
   /** Raw EML source: loaded on demand when the "source" tab opens */
   const [source, setSource] = useState<string | null>(null)
+  /** Per-message override: render the preview on the default light canvas */
+  const [lightPreview, setLightPreview] = useState(false)
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
   /** Preview document with theme defaults injected (dark-mode readability) */
-  const previewDoc = usePreviewDoc(detail?.html ?? '')
+  const previewDoc = usePreviewDoc(detail?.html ?? '', lightPreview)
 
-  // Clear the cached source when switching messages
+  // Clear the cached source and the light-preview override when switching messages
   useEffect(() => {
     setSource(null)
+    setLightPreview(false)
   }, [messageId])
 
   /** Fetch the source the first time the tab is opened */
@@ -277,9 +285,28 @@ export function MessageDetail({
         </TabsList>
 
         {/* HTML preview: the sandbox="" iframe disables scripts and fills the
-            remaining height, scrolling inside like a real mail reader */}
+            remaining height, scrolling inside like a real mail reader. In dark
+            mode, mails that hardcode black text are unreadable on the dark
+            canvas — offer a per-message light preview. */}
         {detail.html !== null && (
           <TabsContent value="preview" className="mt-3 flex min-h-0 flex-1 flex-col">
+            {isDark && !lightPreview && (
+              <div className="text-muted-foreground flex items-center gap-2 pb-2 text-xs">
+                <SunIcon className="size-3.5 shrink-0" />
+                深色模式下部分邮件可能看不清
+                <Button variant="outline" size="xs" onClick={() => setLightPreview(true)}>
+                  用浅色显示
+                </Button>
+              </div>
+            )}
+            {isDark && lightPreview && (
+              <div className="text-muted-foreground flex items-center gap-2 pb-2 text-xs">
+                此邮件正以浅色显示
+                <Button variant="ghost" size="xs" onClick={() => setLightPreview(false)}>
+                  恢复深色
+                </Button>
+              </div>
+            )}
             <iframe
               title="邮件预览"
               sandbox=""
