@@ -291,7 +291,7 @@ export function MessageDetail({
         {detail.html !== null && (
           <TabsContent value="preview" className="mt-3 flex min-h-0 flex-1 flex-col">
             {isDark && !lightPreview && (
-              <div className="text-muted-foreground flex items-center gap-2 pb-2 text-xs">
+              <div className="text-muted-foreground flex items-center gap-2 px-4 pb-2 text-xs">
                 <SunIcon className="size-3.5 shrink-0" />
                 深色模式下部分邮件可能看不清
                 <Button variant="outline" size="xs" onClick={() => setLightPreview(true)}>
@@ -300,7 +300,7 @@ export function MessageDetail({
               </div>
             )}
             {isDark && lightPreview && (
-              <div className="text-muted-foreground flex items-center gap-2 pb-2 text-xs">
+              <div className="text-muted-foreground flex items-center gap-2 px-4 pb-2 text-xs">
                 此邮件正以浅色显示
                 <Button variant="ghost" size="xs" onClick={() => setLightPreview(false)}>
                   恢复深色
