@@ -11,7 +11,7 @@ Self-hosted disposable (temporary) email service. v2 is a full-stack TypeScript 
 - Custom mailbox addresses; credentials can restore the same mailbox across devices
 - Disk protection: messages are cleaned up automatically by TTL and count caps
 
-Live demo (v1): http://disposable.dhc-app.com
+Live demo: https://disposable.dhc.house
 
 ## Architecture
 

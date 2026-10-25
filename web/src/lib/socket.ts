@@ -41,6 +41,11 @@ export function onNewMessage(listener: NewMessageListener): () => void {
   }
 }
 
+/** Current socket instance (null before the first connect) */
+export function getSocket(): Socket | null {
+  return socket
+}
+
 /** Disconnect (when the account is deleted/logged out) */
 export function disconnectSocket(): void {
   socket?.disconnect()

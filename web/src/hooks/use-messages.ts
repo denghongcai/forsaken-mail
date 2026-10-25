@@ -2,11 +2,11 @@
  * Message data hooks: TanStack Query manages the list and detail caches;
  * a socket-pushed message:new event invalidates the list (refetch) and shows a toast.
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { deleteMessage, getMessage, listMessages, setMessageSeen } from '@/lib/api'
-import { onNewMessage } from '@/lib/socket'
+import { getSocket, onNewMessage } from '@/lib/socket'
 
 /** List query key (used for invalidation) */
 export const MESSAGES_KEY = ['messages'] as const
@@ -47,6 +47,31 @@ export function useRealtimeMessages(enabled: boolean): void {
       }
     })
   }, [enabled, queryClient])
+}
+
+/**
+ * Live socket connection state (for the header badge). Tracks the socket's
+ * connect/disconnect lifecycle so the UI can show when realtime push is
+ * unavailable and socket.io is reconnecting.
+ */
+export function useRealtimeStatus(enabled: boolean): boolean {
+  const [connected, setConnected] = useState(false)
+
+  useEffect(() => {
+    if (!enabled) return
+    const socket = getSocket()
+    if (socket === null) return
+    const update = (): void => setConnected(socket.connected)
+    update()
+    socket.on('connect', update)
+    socket.on('disconnect', update)
+    return () => {
+      socket.off('connect', update)
+      socket.off('disconnect', update)
+    }
+  }, [enabled])
+
+  return connected
 }
 
 /** Mark seen */

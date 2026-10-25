@@ -1,20 +1,13 @@
 /**
- * Message list: table view shared by desktop and mobile.
+ * Message list: stacked rows designed for the fixed-width list pane
+ * (sender + time on the first line, subject and intro below).
  * Clicking a row selects the message; unread mail carries a dot marker.
  */
 import { InboxIcon, PaperclipIcon } from 'lucide-react'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { cn } from 'cn'
-import { formatBytes, formatMailTime } from '@/lib/format'
+import { formatMailTime } from '@/lib/format'
 import type { MessageSummary } from '@/lib/types'
 
 interface MessageListProps {
@@ -59,59 +52,47 @@ export function MessageList({ messages, isLoading, selectedId, onSelect }: Messa
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-8" />
-            <TableHead>发件人</TableHead>
-            <TableHead className="min-w-48">主题</TableHead>
-            <TableHead className="hidden text-right md:table-cell">大小</TableHead>
-            <TableHead className="w-28 text-right">时间</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {messages.map((message) => (
-            <TableRow
-              key={message.id}
-              // Unread rows are bold; the selected row is highlighted
-              className={cn(
-                'cursor-pointer',
-                message.id === selectedId && 'bg-muted',
-                !message.seen && 'font-medium',
+    <ul className="flex w-full flex-col">
+      {messages.map((message) => (
+        <li key={message.id}>
+          <button
+            type="button"
+            onClick={() => onSelect(message)}
+            aria-current={message.id === selectedId || undefined}
+            // Unread rows are bold; the selected row is highlighted
+            className={cn(
+              'flex w-full flex-col gap-0.5 border-b px-4 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none',
+              message.id === selectedId && 'bg-muted hover:bg-muted',
+            )}
+          >
+            {/* Line 1: unread dot + sender + time */}
+            <span className="flex w-full items-center gap-2">
+              {!message.seen && (
+                <span aria-label="未读" className="bg-primary size-2 shrink-0 rounded-full" />
               )}
-              onClick={() => onSelect(message)}
-            >
-              <TableCell className="w-8">
-                {/* Unread dot */}
-                {!message.seen && (
-                  <span aria-label="未读" className="bg-primary size-2 rounded-full" />
-                )}
-              </TableCell>
-              <TableCell className="max-w-40 truncate">{senderLabel(message)}</TableCell>
-              <TableCell className="max-w-56">
-                <span className="flex items-center gap-1.5">
-                  {message.hasAttachments && (
-                    <PaperclipIcon className="text-muted-foreground size-3.5 shrink-0" />
-                  )}
-                  <span className="truncate">{message.subject ?? '（无主题）'}</span>
-                </span>
-                {message.intro !== null && (
-                  <span className="text-muted-foreground block truncate text-xs font-normal">
-                    {message.intro}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell className="text-muted-foreground hidden text-right text-xs md:table-cell">
-                {formatBytes(message.size)}
-              </TableCell>
-              <TableCell className="text-muted-foreground text-right text-xs whitespace-nowrap">
+              <span className={cn('min-w-0 flex-1 truncate text-sm', !message.seen && 'font-medium')}>
+                {senderLabel(message)}
+              </span>
+              {message.hasAttachments && (
+                <PaperclipIcon className="text-muted-foreground size-3.5 shrink-0" />
+              )}
+              <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
                 {formatMailTime(message.createdAt)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+              </span>
+            </span>
+            {/* Line 2: subject */}
+            <span
+              className={cn('truncate text-sm', !message.seen ? 'font-medium' : 'text-muted-foreground')}
+            >
+              {message.subject ?? '（无主题）'}
+            </span>
+            {/* Line 3: plain-text intro (optional) */}
+            {message.intro !== null && (
+              <span className="text-muted-foreground truncate text-xs">{message.intro}</span>
+            )}
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }

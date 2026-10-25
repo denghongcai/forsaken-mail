@@ -6,7 +6,8 @@
  * scripts, no same-origin access; hyperlinks embedded in the mail open in a
  * new window by default (handled by the browser).
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTheme } from 'next-themes'
 import {
   ArrowLeftIcon,
   CodeIcon,
@@ -32,7 +33,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
@@ -54,6 +54,28 @@ interface MessageDetailProps {
   onMarkUnread: (id: string) => void
   /** Delete the message (the parent clears the selection) */
   onDelete: (id: string) => void
+}
+
+/**
+ * Preview document builder: injects the app theme's background/foreground
+ * tokens as the iframe document's canvas defaults, so unstyled mail stays
+ * readable in dark mode (the app theme is class-based and would not
+ * propagate to the sandboxed iframe on its own). Mails that set their own
+ * colors are unaffected.
+ */
+function usePreviewDoc(html: string): string {
+  const { resolvedTheme } = useTheme()
+  return useMemo(() => {
+    if (resolvedTheme === undefined) return html
+    const rootStyle = getComputedStyle(document.documentElement)
+    const bg = rootStyle.getPropertyValue('--background').trim()
+    const fg = rootStyle.getPropertyValue('--foreground').trim()
+    if (bg === '' || fg === '') return html
+    const patch = `<style>html{color-scheme:${resolvedTheme === 'dark' ? 'dark' : 'light'};background:${bg};color:${fg}}</style>`
+    if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => `${m}${patch}`)
+    if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, (m) => `${m}<head>${patch}</head>`)
+    return patch + html
+  }, [html, resolvedTheme])
 }
 
 /** Attachment row: icon + filename + size + download button */
@@ -100,6 +122,8 @@ export function MessageDetail({
 }: MessageDetailProps) {
   /** Raw EML source: loaded on demand when the "source" tab opens */
   const [source, setSource] = useState<string | null>(null)
+  /** Preview document with theme defaults injected (dark-mode readability) */
+  const previewDoc = usePreviewDoc(detail?.html ?? '')
 
   // Clear the cached source when switching messages
   useEffect(() => {
@@ -143,9 +167,11 @@ export function MessageDetail({
   }
 
   return (
+    // Full-height reading pane: toolbar + metadata stay pinned on top, the
+    // body views below split the remaining height and scroll by themselves
     <div className="flex h-full min-h-0 flex-col">
       {/* Toolbar row: back (mobile) + action buttons */}
-      <div className="flex items-center gap-2 px-4 pt-3">
+      <div className="flex shrink-0 items-center gap-2 px-4 pt-3">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -193,92 +219,93 @@ export function MessageDetail({
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-4 p-4 pt-1">
-          {/* Metadata */}
-          <div className="flex flex-col gap-1">
-            <h2 className="text-lg leading-tight font-semibold">
-              {detail.subject ?? '（无主题）'}
-            </h2>
-            <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-              <span className="text-foreground font-medium">
-                {detail.from.name ?? detail.from.address}
-              </span>
-              {detail.from.name !== null && detail.from.name !== '' && (
-                <span>&lt;{detail.from.address}&gt;</span>
-              )}
-              <span>→ {detail.to.map((t) => t.address).join(', ')}</span>
-              <Separator orientation="vertical" className="h-3" />
-              <span>{formatMailTime(detail.createdAt)}</span>
-              <span>{formatBytes(detail.size)}</span>
-              {detail.seen ? <Badge variant="secondary">已读</Badge> : <Badge>未读</Badge>}
-            </div>
-          </div>
-
-          {/* Attachments */}
-          {detail.attachments.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {detail.attachments
-                .filter((a) => !a.contentType.startsWith('image/') || !detail.html)
-                .map((a) => (
-                  <AttachmentRow key={a.id} attachment={a} />
-                ))}
-            </div>
-          )}
-
-          {/* Body: three views */}
-          <Tabs
-            defaultValue={detail.html !== null ? 'preview' : 'text'}
-            onValueChange={(v) => {
-              if (v === 'source') void handleSourceTab()
-            }}
-          >
-            <TabsList>
-              {detail.html !== null && (
-                <TabsTrigger value="preview">
-                  <CodeIcon data-icon="inline-start" />
-                  预览
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="text" disabled={detail.text === null}>
-                <TypeIcon data-icon="inline-start" />
-                纯文本
-              </TabsTrigger>
-              <TabsTrigger value="source">
-                <FileTextIcon data-icon="inline-start" />
-                源码
-              </TabsTrigger>
-            </TabsList>
-
-            {/* HTML preview: the sandbox="" iframe disables scripts and fills the remaining height */}
-            {detail.html !== null && (
-              <TabsContent value="preview" className="mt-3">
-                <iframe
-                  title="邮件预览"
-                  sandbox=""
-                  srcDoc={detail.html}
-                  className="bg-background h-[60vh] w-full rounded-lg border"
-                />
-              </TabsContent>
+      {/* Pinned header: metadata + attachments */}
+      <div className="flex shrink-0 flex-col gap-4 px-4 pt-1 pb-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg leading-tight font-semibold">
+            {detail.subject ?? '（无主题）'}
+          </h2>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
+            <span className="text-foreground font-medium">
+              {detail.from.name ?? detail.from.address}
+            </span>
+            {detail.from.name !== null && detail.from.name !== '' && (
+              <span>&lt;{detail.from.address}&gt;</span>
             )}
-
-            <TabsContent value="text" className="mt-3">
-              <pre className="rounded-lg border p-4 text-sm whitespace-pre-wrap">{detail.text}</pre>
-            </TabsContent>
-
-            <TabsContent value="source" className="mt-3">
-              {source === null ? (
-                <div className="text-muted-foreground flex items-center gap-2 p-4 text-sm">
-                  <Spinner />
-                  加载源码…
-                </div>
-              ) : (
-                <pre className="overflow-x-auto rounded-lg border p-4 text-xs">{source}</pre>
-              )}
-            </TabsContent>
-          </Tabs>
+            <span>→ {detail.to.map((t) => t.address).join(', ')}</span>
+            <Separator orientation="vertical" className="h-3" />
+            <span>{formatMailTime(detail.createdAt)}</span>
+            <span>{formatBytes(detail.size)}</span>
+            {detail.seen ? <Badge variant="secondary">已读</Badge> : <Badge>未读</Badge>}
+          </div>
         </div>
-      </ScrollArea>
+
+        {detail.attachments.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {detail.attachments
+              .filter((a) => !a.contentType.startsWith('image/') || !detail.html)
+              .map((a) => (
+                <AttachmentRow key={a.id} attachment={a} />
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* Body: three views, each filling the remaining pane height */}
+      <Tabs
+        defaultValue={detail.html !== null ? 'preview' : 'text'}
+        onValueChange={(v) => {
+          if (v === 'source') void handleSourceTab()
+        }}
+        className="min-h-0 flex-1"
+      >
+        <TabsList className="mx-4 shrink-0">
+          {detail.html !== null && (
+            <TabsTrigger value="preview">
+              <CodeIcon data-icon="inline-start" />
+              预览
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="text" disabled={detail.text === null}>
+            <TypeIcon data-icon="inline-start" />
+            纯文本
+          </TabsTrigger>
+          <TabsTrigger value="source">
+            <FileTextIcon data-icon="inline-start" />
+            源码
+          </TabsTrigger>
+        </TabsList>
+
+        {/* HTML preview: the sandbox="" iframe disables scripts and fills the
+            remaining height, scrolling inside like a real mail reader */}
+        {detail.html !== null && (
+          <TabsContent value="preview" className="mt-3 flex min-h-0 flex-1 flex-col">
+            <iframe
+              title="邮件预览"
+              sandbox=""
+              srcDoc={previewDoc}
+              className="min-h-0 w-full flex-1 border-t bg-background"
+            />
+          </TabsContent>
+        )}
+
+        <TabsContent value="text" className="mt-3 flex min-h-0 flex-1 flex-col">
+          <pre className="h-full w-full overflow-auto border-t p-4 text-sm whitespace-pre-wrap">
+            {detail.text}
+          </pre>
+        </TabsContent>
+
+        <TabsContent value="source" className="mt-3 flex min-h-0 flex-1 flex-col">
+          {source === null ? (
+            <div className="text-muted-foreground flex items-center gap-2 border-t p-4 text-sm">
+              <Spinner />
+              加载源码…
+            </div>
+          ) : (
+            <pre className="h-full w-full overflow-auto border-t p-4 text-xs">{source}</pre>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
