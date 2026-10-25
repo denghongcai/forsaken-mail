@@ -10,7 +10,9 @@
  *   - Only recipients under our own domains (config.domains) are accepted;
  *     any other RCPT is rejected outright with 550
  *   - Local parts matching the keyword blacklist are rejected as well
- *   - Mail for unknown accounts is "accepted then silently dropped"
+ *   - Routing tries the header recipients first, then the SMTP envelope
+ *     recipients (auto-forwarded mail keeps the original recipient in To:)
+ *   - Mail matching no known account is "accepted then silently dropped"
  *     (avoids leaking an account-probing oracle to external senders)
  */
 import { randomUUID } from 'node:crypto'
@@ -52,21 +54,21 @@ function onRcptTo(
   callback()
 }
 
-/** Extract the first "recipient" address object from the parse result (to/cc/bcc, in that order) */
-function firstRecipient(parsed: ParsedMail): { address: string; name: string } | undefined {
+/** All header recipient addresses (to/cc/bcc flattened, lowercased, in priority order) */
+function headerRecipients(parsed: ParsedMail): string[] {
   const pools = [parsed.to, parsed.cc, parsed.bcc]
+  const addresses: string[] = []
   for (const pool of pools) {
     if (pool === undefined) continue
     // AddressObject.value is the address list of that field (HeaderAddress[])
     const list = Array.isArray(pool) ? pool : [pool]
     for (const entry of list) {
-      const header = entry.value.find((v) => v.address !== undefined)
-      if (header?.address !== undefined) {
-        return { address: header.address, name: header.name }
+      for (const header of entry.value) {
+        if (header.address !== undefined) addresses.push(header.address.toLowerCase())
       }
     }
   }
-  return undefined
+  return addresses
 }
 
 /** mailparser attachments → storage rows (content becomes base64; entries without content are skipped) */
@@ -94,20 +96,33 @@ function buildIntro(parsed: ParsedMail): string | null {
 
 /**
  * Parse and deliver a single message.
- * The return value exists for test assertions: 'stored' = kept, 'dropped' = recipient
- * account unknown and the message discarded.
+ *
+ * `envelopeRcpts` carries the SMTP envelope recipients (RCPT TO). Auto-forwarded
+ * mail keeps the ORIGINAL recipient in the To: header while the envelope points
+ * at this service, so routing tries header recipients first and falls back to
+ * the envelope when no header recipient matches an account.
+ *
+ * The return value exists for test assertions: 'stored' = kept, 'dropped' = no
+ * candidate matched an account and the message was discarded.
  */
 export async function deliverMessage(
   raw: Buffer,
   notify: NewMessageListener,
+  envelopeRcpts: string[] = [],
 ): Promise<'stored' | 'dropped'> {
   const parsed = await simpleParser(raw)
 
-  // Locate the recipient account: use the first parsed recipient, lowercased
-  const recipient = firstRecipient(parsed)
-  if (recipient === undefined) return 'dropped'
-  const address = recipient.address.toLowerCase()
-  const account: AccountRow | undefined = findAccountByAddress(address)
+  // Candidate recipients: header addresses first, then the envelope, deduplicated
+  const candidates = [
+    ...new Set([...headerRecipients(parsed), ...envelopeRcpts.map((a) => a.toLowerCase())]),
+  ]
+
+  // First candidate that maps to a real account wins
+  let account: AccountRow | undefined
+  for (const address of candidates) {
+    account = findAccountByAddress(address)
+    if (account !== undefined) break
+  }
   if (account === undefined) return 'dropped'
 
   // Message size: raw message + all attachments
@@ -156,12 +171,14 @@ export function startSmtp(notify: NewMessageListener): SMTPServer {
     onRcptTo,
     // Once the full message is collected, hand it to parse+store; parse failures
     // must not affect the SMTP session reply
-    onData(stream, _session, callback) {
+    onData(stream, session, callback) {
       const chunks: Buffer[] = []
       stream.on('data', (chunk: Buffer) => chunks.push(chunk))
       stream.on('end', () => {
         const raw = Buffer.concat(chunks)
-        deliverMessage(raw, notify).catch((err: unknown) => {
+        // Envelope recipients back header-based routing (auto-forwarded mail)
+        const envelopeRcpts = session.envelope.rcptTo.map((r) => r.address)
+        deliverMessage(raw, notify, envelopeRcpts).catch((err: unknown) => {
           console.error('[smtp] failed to parse message, dropped:', err)
         })
         callback()
