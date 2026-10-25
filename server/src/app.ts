@@ -75,7 +75,8 @@ export function createApp(notify: NewMessageListener = () => {}): Express {
 
   /* ------------------------- Frontend statics ------------------------- */
   if (webDistDir !== null) {
-    // Static assets cached 1 hour (Vite emits content-hashed filenames, safe to cache).
+    // Hashed static assets are immutable: cache for a year (RFC-suggested
+    // maximum for "effectively forever").
     // index.html must stay no-cache: a cached index would reference hashed
     // assets that no longer exist after a deploy, breaking the app until the
     // cache expires.
@@ -84,7 +85,13 @@ export function createApp(notify: NewMessageListener = () => {}): Express {
         res.setHeader('Cache-Control', 'no-cache')
       }
     }
-    app.use(express.static(webDistDir, { maxAge: 3600_000, setHeaders: noCacheHtml }))
+    app.use(
+      express.static(webDistDir, {
+        maxAge: 365 * 24 * 3600_000,
+        immutable: true,
+        setHeaders: noCacheHtml,
+      }),
+    )
     // SPA fallback: any non-/api GET returns index.html and defers to the frontend router
     app.use((req, res, next) => {
       if (req.method !== 'GET') {
