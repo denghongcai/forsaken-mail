@@ -1,0 +1,7 @@
+// Minimal config — the relay has no bindings; its secrets (INGEST_URL,
+// INGEST_TOKEN) are set with `npx wrangler secret put <NAME>`.
+{
+  "name": "forsaken-mail-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+}
