@@ -20,6 +20,7 @@ import { simpleParser, type ParsedMail, type Attachment } from 'mailparser'
 import { SMTPServer, type SMTPServerAddress, type SMTPServerSession } from 'smtp-server'
 import { config } from './config.js'
 import { findAccountByAddress, insertMessage } from './db.js'
+import { logger } from './logger.js'
 import type { AccountRow, AttachmentRow, MessageRow } from './types.js'
 
 /** Callback signature invoked after a message is stored (implemented by realtime for WebSocket push) */
@@ -179,7 +180,7 @@ export function startSmtp(notify: NewMessageListener): SMTPServer {
         // Envelope recipients back header-based routing (auto-forwarded mail)
         const envelopeRcpts = session.envelope.rcptTo.map((r) => r.address)
         deliverMessage(raw, notify, envelopeRcpts).catch((err: unknown) => {
-          console.error('[smtp] failed to parse message, dropped:', err)
+          logger.error('[smtp] failed to parse message, dropped:', err)
         })
         callback()
       })
@@ -188,7 +189,7 @@ export function startSmtp(notify: NewMessageListener): SMTPServer {
   })
   // Client misbehavior (aborted connections etc.) is logged only, never crashes the process
   server.on('error', (err: Error) => {
-    console.error('[smtp] session error:', err.message)
+    logger.error('[smtp] session error:', err.message)
   })
   server.listen(config.smtp.port, config.smtp.host)
   return server
