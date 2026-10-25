@@ -83,3 +83,18 @@ node_modules
 
 # Mailin tmp directory
 .tmp
+
+### v2 monorepo ###
+# Build artifacts
+dist/
+# Local config & secrets
+.env
+.env.*
+# Runtime data (SQLite database)
+data/
+*.sqlite
+*.sqlite-journal
+# Browser automation artifacts
+.playwright-cli/
+# Local planning notes (not part of the repo)
+docs/plans/
