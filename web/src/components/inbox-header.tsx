@@ -1,9 +1,17 @@
 /**
- * Top bar: brand + current mailbox address (copy/change) + theme toggle.
+ * Top bar: brand + realtime link badge + current mailbox address (copy/change)
+ * + GitHub link + theme toggle.
  */
 import { useState } from 'react'
-import { CheckIcon, CopyIcon, MailIcon, RefreshCwIcon, UserRoundPenIcon } from 'lucide-react'
+import {
+  CheckIcon,
+  CopyIcon,
+  MailIcon,
+  RefreshCwIcon,
+  UserRoundPenIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { GithubIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,11 +28,15 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@/components/ui/input-group'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { cn } from 'cn'
 import type { StoredAccount } from '@/lib/account'
 
 interface InboxHeaderProps {
   account: StoredAccount
+  /** Whether the realtime socket is currently connected */
+  realtimeConnected: boolean
   /** Switch to a new random address */
   onNewRandom: () => void
   /** Open the "custom address" dialog */
@@ -33,8 +45,12 @@ interface InboxHeaderProps {
   onDestroyAndRenew: () => void
 }
 
+/** Repository URL for the GitHub badge */
+const GITHUB_URL = 'https://github.com/denghongcai/forsaken-mail'
+
 export function InboxHeader({
   account,
+  realtimeConnected,
   onNewRandom,
   onOpenCustomDialog,
   onDestroyAndRenew,
@@ -50,16 +66,44 @@ export function InboxHeader({
   }
 
   return (
-    <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-10 border-b backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
+    // Full-width toolbar; no page scrolling happens beneath it (app shell),
+    // so no sticky/backdrop treatment is needed
+    <header className="bg-background border-b">
+      <div className="flex h-14 w-full items-center gap-3 px-4">
         {/* Brand */}
-        <div className="flex items-center gap-2 font-semibold">
+        <div className="flex shrink-0 items-center gap-2 font-semibold">
           <MailIcon className="text-primary" />
           <span className="hidden sm:inline">Forsaken Mail</span>
         </div>
 
+        {/* Realtime link badge: green = push connected, amber = reconnecting */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span
+                className={cn(
+                  'hidden items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-muted-foreground text-xs md:flex',
+                )}
+                aria-live="polite"
+              />
+            }
+          >
+            <span
+              className={cn(
+                'size-1.5 rounded-full',
+                realtimeConnected ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-amber-500',
+                !realtimeConnected && 'animate-pulse',
+              )}
+            />
+            {realtimeConnected ? '实时' : '重连中'}
+          </TooltipTrigger>
+          <TooltipContent>
+            {realtimeConnected ? '实时推送已连接' : '连接断开，正在自动重连…'}
+          </TooltipContent>
+        </Tooltip>
+
         {/* Current address: read-only input + copy button */}
-        <InputGroup className="ml-auto h-9 max-w-md">
+        <InputGroup className="mx-auto h-9 w-full max-w-md">
           <InputGroupInput value={account.address} readOnly aria-label="当前邮箱地址" />
           <InputGroupAddon align="inline-end">
             <InputGroupButton
@@ -100,6 +144,24 @@ export function InboxHeader({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* GitHub project link */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                render={
+                  <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub 项目主页" />
+                }
+              />
+            }
+          >
+            <GithubIcon />
+          </TooltipTrigger>
+          <TooltipContent>GitHub 项目主页</TooltipContent>
+        </Tooltip>
 
         <ThemeToggle />
       </div>

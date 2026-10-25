@@ -1,6 +1,8 @@
 /**
  * Inbox main page:
- *   two-column "list + detail" layout on desktop; on mobile selecting a
+ *   a full-viewport mail-client shell — header on top, below it a fixed-width
+ *   message list and a detail pane that splits the remaining space; each pane
+ *   scrolls independently (no page-level scrolling). On mobile selecting a
  *   message switches to a full-screen detail view.
  * Data flow: useAccount manages the account lifecycle; useMessageList /
  * useMessageDetail go through TanStack Query; realtime push invalidates the
@@ -21,6 +23,7 @@ import {
   useMessageDetail,
   useMessageList,
   useRealtimeMessages,
+  useRealtimeStatus,
 } from '@/hooks/use-messages'
 import type { MessageSummary } from '@/lib/types'
 
@@ -36,6 +39,7 @@ export default function App() {
 
   const listQuery = useMessageList(ready)
   const detailQuery = useMessageDetail(selectedId, ready)
+  const realtimeConnected = useRealtimeStatus(ready)
   const markSeen = useMarkSeen()
   const deleteMutation = useDeleteMessage(() => {
     setSelectedId(null)
@@ -69,7 +73,7 @@ export default function App() {
 
   if (state.status === 'loading') {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3">
+      <div className="flex h-dvh flex-col items-center justify-center gap-3">
         <Spinner className="size-6" />
         <p className="text-muted-foreground text-sm">正在准备你的临时邮箱…</p>
       </div>
@@ -78,7 +82,7 @@ export default function App() {
 
   if (state.status === 'error') {
     return (
-      <div className="flex h-screen items-center justify-center p-4">
+      <div className="flex h-dvh items-center justify-center p-4">
         <Alert>
           <AlertTitle>初始化失败</AlertTitle>
           <AlertDescription>
@@ -97,18 +101,22 @@ export default function App() {
   const { account } = state
 
   return (
-    <div className="flex min-h-screen flex-col">
+    // Fixed-height app shell: the header and the two panes fill the viewport;
+    // only the panes scroll, never the page itself
+    <div className="flex h-dvh flex-col overflow-hidden">
       <InboxHeader
         account={account}
+        realtimeConnected={realtimeConnected}
         onNewRandom={() => void switchToNewRandom()}
         onOpenCustomDialog={() => setCustomDialogOpen(true)}
         onDestroyAndRenew={() => void destroyAndRenew()}
       />
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-0 p-0 lg:grid-cols-5 lg:gap-4 lg:p-4">
-        {/* List column: hidden on mobile while a message is selected */}
+      <main className="flex min-h-0 flex-1">
+        {/* List column: fixed width, full height, scrolls on its own; hidden
+            on mobile while a message is selected */}
         <section
-          className={`border-b lg:col-span-2 lg:border-r lg:border-b-0 ${mobileDetailOpen ? 'hidden lg:block' : ''}`}
+          className={`w-full min-h-0 flex-col overflow-y-auto border-b lg:w-[400px] lg:shrink-0 lg:border-r lg:border-b-0 xl:w-[440px] ${mobileDetailOpen ? 'hidden lg:flex' : 'flex'}`}
         >
           <MessageList
             messages={listQuery.data?.items}
@@ -118,9 +126,9 @@ export default function App() {
           />
         </section>
 
-        {/* Detail column: takes no space on mobile while nothing is selected */}
+        {/* Detail column: takes the rest of the viewport; scrolls inside */}
         <section
-          className={`min-h-0 flex-1 lg:col-span-3 ${mobileDetailOpen ? '' : 'hidden lg:block'}`}
+          className={`min-h-0 min-w-0 flex-1 flex-col ${mobileDetailOpen ? 'flex' : 'hidden lg:flex'}`}
         >
           <MessageDetail
             messageId={selectedId}
