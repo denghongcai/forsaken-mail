@@ -87,17 +87,25 @@ You can verify them with [mxtoolbox](https://mxtoolbox.com/diagnostic.aspx).
 
 ### Docker (recommended)
 
+Multi-arch images (amd64 / arm64) are published to GHCR on every master push — no local build required:
+
 ```bash
-docker build -t forsaken-mail .
+docker pull ghcr.io/denghongcai/forsaken-mail:latest
 # The production domains come from the DOMAINS env; port 25 must be reachable for direct delivery
 docker run --name forsaken-mail -d \
   -p 25:25 -p 3000:3000 \
   -e DOMAINS=mail.example.com \
   -v forsaken-data:/app/data \
-  forsaken-mail
+  ghcr.io/denghongcai/forsaken-mail:latest
 ```
 
 Open `http://<host>:3000` and it works.
+
+To build the image yourself instead (or when hacking on the code):
+
+```bash
+docker build -t forsaken-mail .
+```
 
 ### Bare metal
 
