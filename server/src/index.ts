@@ -1,5 +1,3 @@
-/* eslint-disable no-console -- the entrypoint's startup/shutdown logs go straight to stdout for containers to collect */
-
 /**
  * Service entrypoint: wires up the three main pieces — HTTP (API+SPA),
  * WebSocket push, and SMTP ingestion.
@@ -13,6 +11,7 @@ import { createServer } from 'node:http'
 import { config, smtpEnabled } from './config.js'
 import { db } from './db.js'
 import { createApp } from './app.js'
+import { logger } from './logger.js'
 import { createRealtime, notifyNewMessage } from './realtime.js'
 import { startSmtp, type NewMessageListener } from './smtp.js'
 
@@ -30,27 +29,27 @@ const smtpServer = smtpEnabled ? startSmtp(notify) : null
 // instead of an unhandled exception
 httpServer.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(
+    logger.error(
       `[http] port ${config.http.port} is already in use; change PORT or stop the process holding it`,
     )
   } else {
-    console.error('[http] failed to listen:', err.message)
+    logger.error('[http] failed to listen:', err.message)
   }
   process.exit(1)
 })
 
 httpServer.listen(config.http.port, config.http.host, () => {
-  console.log(`[http] listening on ${config.http.host}:${config.http.port}`)
+  logger.info(`[http] listening on ${config.http.host}:${config.http.port}`)
   if (smtpServer !== null) {
-    console.log(`[smtp] listening on ${config.smtp.host}:${config.smtp.port}`)
+    logger.info(`[smtp] listening on ${config.smtp.host}:${config.smtp.port}`)
   } else {
-    console.log('[smtp] disabled (SMTP_DISABLED=1)')
+    logger.info('[smtp] disabled (SMTP_DISABLED=1)')
   }
 })
 
 /** Graceful shutdown: close SMTP, HTTP, and socket.io in order, then the database */
 function shutdown(signal: string): void {
-  console.log(`[server] received ${signal}, shutting down...`)
+  logger.info(`[server] received ${signal}, shutting down...`)
   smtpServer?.close(() => {
     httpServer.close(() => {
       io.close(() => {

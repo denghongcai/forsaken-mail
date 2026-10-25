@@ -15,6 +15,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { z } from 'zod'
 import { SERVER_ROOT } from './config.js'
 import { ApiError } from './errors.js'
+import { logger } from './logger.js'
 import { accountsRouter } from './routes/accounts.js'
 import { domainsRouter } from './routes/domains.js'
 import { meRouter } from './routes/me.js'
@@ -94,7 +95,7 @@ export function createApp(): Express {
       return
     }
     // Unknown error: log it but never expose details to the client
-    console.error(`[http] ${req.method} ${req.path} failed:`, err)
+    logger.error(`[http] ${req.method} ${req.path} failed:`, err)
     res.status(500).json({ error: { code: 'internal_error', message: 'Internal server error' } })
   })
 
