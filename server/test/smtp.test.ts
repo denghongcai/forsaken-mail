@@ -121,6 +121,46 @@ describe('SMTP ingestion', () => {
     expect(findAccountByAddress('nobody@test.local')).toBeUndefined()
   })
 
+  it('auto-forwarded mail is routed via the SMTP envelope when the To header points elsewhere', async () => {
+    // Simulate an auto-forward: the To: header still shows the ORIGINAL
+    // recipient (an external mailbox) while the envelope recipient is our
+    // address — the server must fall back to the envelope to find the account
+    await transporter.sendMail({
+      from: 'service@example.com',
+      to: 'someone@163.com',
+      envelope: {
+        from: 'service@example.com',
+        to: 'alice@test.local',
+      },
+      subject: 'forwarded verification code',
+      text: 'your code is 123456',
+    })
+    await waitForMail(2)
+
+    const forwarded = received[1]!
+    expect(forwarded.accountId).toBe(aliceId)
+    expect(forwarded.subject).toBe('forwarded verification code')
+    // The stored "to" stays truthful to the headers (the original recipient)
+    const to: { address: string }[] = JSON.parse(forwarded.toJson)
+    expect(to[0]!.address).toBe('someone@163.com')
+  })
+
+  it('header recipients take priority over the envelope', async () => {
+    // Both accounts exist; the header To must win over the envelope RCPT
+    await transporter.sendMail({
+      from: 'outside@example.com',
+      to: 'alice@test.local',
+      envelope: {
+        from: 'outside@example.com',
+        to: 'bob@test.local',
+      },
+      subject: 'direct',
+      text: 'x',
+    })
+    await waitForMail(3)
+    expect(received[2]!.accountId).toBe(aliceId)
+  })
+
   it('blacklisted recipient is rejected at the RCPT stage', async () => {
     await expect(
       transporter.sendMail({
