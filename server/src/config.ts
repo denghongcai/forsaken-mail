@@ -10,6 +10,7 @@
  *   PORT / HOST                     HTTP listen port and address
  *   SMTP_PORT / SMTP_HOST           SMTP listen port and address
  *   SMTP_DISABLED=1                 disable the built-in SMTP (API-only/test scenarios)
+ *   INGEST_TOKEN                    shared secret for POST /api/ingest (relay mode); unset = disabled
  *   DOMAINS                         comma-separated list of mail domains
  *   MESSAGE_TTL_HOURS               message retention period (hours)
  *   MAX_MESSAGES_PER_ACCOUNT        per-account message cap
@@ -39,6 +40,11 @@ const configSchema = z.object({
     port: z.number().int().min(0).max(65535),
     /** Maximum size of a single message in bytes; larger messages are rejected */
     sizeLimit: z.number().int().positive(),
+  }),
+  /** HTTP intake for relayed mail (routes/ingest.ts) — for CDN-fronted deployments */
+  ingest: z.object({
+    /** Shared Bearer secret the relay must present; null = endpoint disabled */
+    token: z.string().min(1).nullable().default(null),
   }),
   /** Disk protection: retention policy, see docs/plans design document */
   retention: z.object({
@@ -119,6 +125,10 @@ if (process.env.SMTP_HOST !== undefined) smtpEnv.host = process.env.SMTP_HOST
 const smtpPort = intEnv('SMTP_PORT')
 if (smtpPort !== undefined) smtpEnv.port = smtpPort
 merged.smtp = deepMerge(merged.smtp ?? {}, smtpEnv)
+
+if (process.env.INGEST_TOKEN !== undefined) {
+  merged.ingest = deepMerge(merged.ingest ?? {}, { token: process.env.INGEST_TOKEN })
+}
 
 const retentionEnv: Record<string, unknown> = {}
 const ttl = intEnv('MESSAGE_TTL_HOURS')

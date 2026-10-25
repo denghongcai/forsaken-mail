@@ -15,13 +15,17 @@ import { logger } from './logger.js'
 import { createRealtime, notifyNewMessage } from './realtime.js'
 import { startSmtp, type NewMessageListener } from './smtp.js'
 
-const app = createApp()
-const httpServer = createServer(app)
+const httpServer = createServer()
 
 // WebSocket push and SMTP ingestion are decoupled through a callback: after a
 // message is stored, broadcast to the recipient account's room
 const io = createRealtime(httpServer)
 const notify: NewMessageListener = (accountId, message) => notifyNewMessage(io, accountId, message)
+
+// The Express handler is attached after socket.io so the API and the raw-mail
+// ingest route share the same notify callback
+const app = createApp(notify)
+httpServer.on('request', app)
 
 const smtpServer = smtpEnabled ? startSmtp(notify) : null
 
