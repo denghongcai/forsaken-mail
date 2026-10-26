@@ -5,11 +5,30 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="keywords" content="临时邮箱,forsaken mail,disposable mail" />
-    <meta name="description" content="Forsaken Mail —— 自托管的一次性临时邮箱服务" />
+    <meta name="description" content="Forsaken Mail —— 自托管的一次性临时邮箱服务，打开即用、无需注册，新邮件实时推送到浏览器。" />
     <title>Forsaken Mail · 临时邮箱</title>
+    <!-- Self-hosters: point canonical/og:url at your own domain before deploying -->
+    <link rel="canonical" href="https://disposable.dhc.house/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Forsaken Mail" />
+    <meta property="og:title" content="Forsaken Mail · 临时邮箱" />
+    <meta property="og:description" content="自托管的一次性临时邮箱服务，打开即用、无需注册，新邮件实时推送到浏览器。" />
+    <meta property="og:url" content="https://disposable.dhc.house/" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Forsaken Mail · 临时邮箱" />
+    <meta name="twitter:description" content="自托管的一次性临时邮箱服务，打开即用、无需注册，新邮件实时推送到浏览器。" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- No-JS fallback (React replaces this on mount); doubles as the
+          crawlable copy for spiders that skip JavaScript -->
+      <noscript>
+        <h1>Forsaken Mail · 临时邮箱</h1>
+        <p>自托管的一次性临时邮箱服务：打开即用、无需注册，系统自动生成一个随机邮箱地址，新邮件实时推送到浏览器；邮件按 TTL 自动清理。</p>
+        <p>本应用需要启用 JavaScript 才能工作。</p>
+      </noscript>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
